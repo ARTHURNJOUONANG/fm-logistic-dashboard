@@ -1,65 +1,111 @@
-import Image from "next/image";
+"use client";
+import { useMetrics } from "@/hooks/useMetrics";
+import KpiCard from "./components/KpiCard";
+import RequestChart from "./components/RequestChart";
+import DonutChart from "./components/DonutChart";
+import EndpointTable from "./components/EndpointTable";
+import LogFeed from "./components/LogFeed";
+import { useEffect, useState } from "react";
 
-export default function Home() {
+export default function Dashboard() {
+  const { metrics, history, endpoints, logs } = useMetrics();
+  const [time, setTime] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const tick = () => {
+      const now = new Date();
+      setTime(
+        `${String(now.getHours()).padStart(2, "0")}:${String(
+          now.getMinutes()
+        ).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`
+      );
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!mounted) return (
+    <main className="min-h-screen bg-[#0f1117] flex items-center justify-center">
+      <div className="text-gray-500 text-sm font-mono animate-pulse">
+        Chargement du dashboard...
+      </div>
+    </main>
+  );
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="min-h-screen bg-[#0f1117] p-6">
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="text-lg font-medium text-white">
+            <span className="text-[#2a78d6]">FM</span> Logistic
+            <span className="text-gray-500 font-normal ml-2">
+               Monitoring
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-950 border border-emerald-900 rounded-full px-3 py-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Live
+          </div>
+        </div>
+        <div className="text-xs text-gray-500 font-mono">{time}</div>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <KpiCard
+          icon="⚡"
+          label="Requêtes / min"
+          value={metrics.rpm}
+          delta="↑ Actif"
+          deltaType="up"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+        <KpiCard
+          icon="⏱"
+          label="Latence moy."
+          value={`${metrics.latency} ms`}
+          delta={metrics.latency > 70 ? "↑ En hausse" : "↓ Stable"}
+          deltaType={metrics.latency > 70 ? "down" : "up"}
+        />
+        <KpiCard
+          icon="⚠"
+          label="Taux d'erreur"
+          value={`${metrics.errorRate}%`}
+          delta={metrics.errorRate > 2.5 ? "↑ En hausse" : "↓ Stable"}
+          deltaType={metrics.errorRate > 2.5 ? "down" : "up"}
+        />
+        <KpiCard
+          icon="🟢"
+          label="Uptime"
+          value={`${metrics.uptime}%`}
+          delta="Stable"
+          deltaType="neutral"
+        />
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div className="md:col-span-2">
+          <RequestChart data={history} />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        <DonutChart />
+      </div>
+
+      {/* Bottom */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <EndpointTable endpoints={endpoints} />
+        <LogFeed logs={logs} />
+      </div>
+
+      {/* Footer */}
+      <div className="mt-6 text-center text-xs text-gray-600">
+        FM Logistic · · Monitoring Dashboard · Développé par Arthur Njouonang
+      </div>
+
+    </main>
   );
 }
